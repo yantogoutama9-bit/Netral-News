@@ -1,36 +1,46 @@
-// REGISTER SERVICE WORKER
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js");
 }
 
-// AMBIL CONTAINER (INI YANG SEBELUMNYA HILANG)
 const newsContainer = document.getElementById("news");
 
-// RSS FEEDS
+// RSS sources
 const feeds = [
-  { source: "Kompas", url: "https://rss.kompas.com/news" },
-  { source: "CNN Indonesia", url: "https://www.cnnindonesia.com/rss" },
-  { source: "KBR", url: "https://kbr.id/rss" }
+  {
+    source: "Kompas",
+    url: "https://rss.kompas.com/news"
+  },
+  {
+    source: "CNN Indonesia",
+    url: "https://www.cnnindonesia.com/rss"
+  },
+  {
+    source: "KBR",
+    url: "https://kbr.id/rss"
+  }
 ];
 
+// RSS proxy (public, read-only)
+const PROXY = "https://api.allorigins.win/raw?url=";
+
 async function loadRSS() {
-  newsContainer.innerHTML = "<p>Memuat berita terbaru...</p>";
+  newsContainer.innerHTML = "Memuat berita terbaru...";
+
   let articles = [];
 
   for (const feed of feeds) {
     try {
-      const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`;
-      const res = await fetch(api);
-      const data = await res.json();
+      const res = await fetch(PROXY + encodeURIComponent(feed.url));
+      const text = await res.text();
+      const xml = new DOMParser().parseFromString(text, "text/xml");
+      const items = xml.querySelectorAll("item");
 
-      if (!data.items) continue;
-
-      data.items.forEach(item => {
+      items.forEach(item => {
         articles.push({
-          title: item.title,
-          link: item.link,
-          desc: item.description || "",
-          date: new Date(item.pubDate),
+          title: item.querySelector("title")?.textContent || "",
+          link: item.querySelector("link")?.textContent || "",
+          desc: item.querySelector("description")?.textContent || "",
+          date: new Date(item.querySelector("pubDate")?.textContent || Date.now()),
           source: feed.source
         });
       });
@@ -40,26 +50,23 @@ async function loadRSS() {
     }
   }
 
+  // sort terbaru
   articles.sort((a, b) => b.date - a.date);
+
   renderNews(articles.slice(0, 30));
 }
 
-function renderNews(items) {
+function renderNews(data) {
   newsContainer.innerHTML = "";
 
-  if (items.length === 0) {
-    newsContainer.innerHTML = "<p>Tidak ada berita.</p>";
-    return;
-  }
-
-  items.forEach(item => {
+  data.forEach(item => {
     const div = document.createElement("div");
     div.className = "article";
 
     div.innerHTML = `
       <a href="${item.link}" target="_blank" rel="noopener">
         <h3>${item.title}</h3>
-        <small>${item.source} | ${item.date.toLocaleString("id-ID")}</small>
+        <small>${item.source} | ${item.date.toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })}</small>
         <p>${stripHTML(item.desc).slice(0, 120)}...</p>
       </a>
     `;
@@ -68,14 +75,15 @@ function renderNews(items) {
   });
 }
 
+// helper
 function stripHTML(html) {
   const div = document.createElement("div");
   div.innerHTML = html;
-  return div.textContent || "";
+  return div.textContent || div.innerText || "";
 }
 
-// LOAD AWAL
+// initial load
 loadRSS();
 
-// AUTO REFRESH 15 MENIT
+// auto refresh tiap 15 menit
 setInterval(loadRSS, 15 * 60 * 1000);
