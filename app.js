@@ -2,7 +2,7 @@ const feeds = [
   { name: "Kompas", url: "https://rss.kompas.com/" },
   { name: "CNN Indonesia", url: "https://www.cnnindonesia.com/rss" },
   { name: "KBR", url: "https://kbr.id/rss" },
-  { name: "BeritaBolaDunia", url: "https://beritabola-dunia.id/rss" }
+  { name: "Berita Bola Dunia", url: "https://beritabola-dunia.id/rss" }
 ];
 
 const container = document.getElementById("news");
