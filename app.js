@@ -1,21 +1,20 @@
+// REGISTER SERVICE WORKER
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+
+// AMBIL CONTAINER (INI YANG SEBELUMNYA HILANG)
+const newsContainer = document.getElementById("news");
+
+// RSS FEEDS
 const feeds = [
-  {
-    source: "Kompas",
-    url: "https://rss.kompas.com/news"
-  },
-  {
-    source: "CNN Indonesia",
-    url: "https://www.cnnindonesia.com/rss"
-  },
-  {
-    source: "KBR",
-    url: "https://kbr.id/rss"
-  }
+  { source: "Kompas", url: "https://rss.kompas.com/news" },
+  { source: "CNN Indonesia", url: "https://www.cnnindonesia.com/rss" },
+  { source: "KBR", url: "https://kbr.id/rss" }
 ];
 
 async function loadRSS() {
-  newsContainer.innerHTML = "Memuat berita terbaru...";
-
+  newsContainer.innerHTML = "<p>Memuat berita terbaru...</p>";
   let articles = [];
 
   for (const feed of feeds) {
@@ -36,11 +35,47 @@ async function loadRSS() {
         });
       });
 
-    } catch (e) {
-      console.error("RSS error:", feed.source, e);
+    } catch (err) {
+      console.error("RSS error:", feed.source, err);
     }
   }
 
   articles.sort((a, b) => b.date - a.date);
   renderNews(articles.slice(0, 30));
 }
+
+function renderNews(items) {
+  newsContainer.innerHTML = "";
+
+  if (items.length === 0) {
+    newsContainer.innerHTML = "<p>Tidak ada berita.</p>";
+    return;
+  }
+
+  items.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "article";
+
+    div.innerHTML = `
+      <a href="${item.link}" target="_blank" rel="noopener">
+        <h3>${item.title}</h3>
+        <small>${item.source} | ${item.date.toLocaleString("id-ID")}</small>
+        <p>${stripHTML(item.desc).slice(0, 120)}...</p>
+      </a>
+    `;
+
+    newsContainer.appendChild(div);
+  });
+}
+
+function stripHTML(html) {
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  return div.textContent || "";
+}
+
+// LOAD AWAL
+loadRSS();
+
+// AUTO REFRESH 15 MENIT
+setInterval(loadRSS, 15 * 60 * 1000);
