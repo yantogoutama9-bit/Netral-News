@@ -1,71 +1,57 @@
-name: RSS to Telegram - Netral News
+- name: Fetch RSS & send to Telegram
+  run: |
+    python << 'EOF'
+    import requests, feedparser
 
-on:
-  schedule:
-    - cron: "*/15 * * * *"
-  workflow_dispatch:
+    BOT_TOKEN = "${TG_BOT_TOKEN}"
+    CHAT_ID = "${CHAT_ID}"
 
-jobs:
-  fetch-and-send:
-    runs-on: ubuntu-latest
+    # =========================
+    # TEST PAKSA (WAJIB MASUK)
+    # =========================
+    test = requests.post(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        data={
+            "chat_id": CHAT_ID,
+            "text": "✅ TEST BOT NETRAL NEWS — JIKA INI MUNCUL, BOT & CHANNEL AMAN"
+        }
+    )
 
-    env:
-      TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-      CHAT_ID: "@netralnews_2026"
+    print("Test status:", test.status_code)
+    print(test.text)
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    # =========================
+    # RSS (SETELAH TEST)
+    # =========================
+    RSS_FEEDS = [
+        "https://rss.kompas.com/",
+        "https://www.cnnindonesia.com/rss",
+        "https://kbr.id/rss",
+        "https://www.bola.com/rss"
+    ]
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+    sent = 0
 
-      - name: Install dependencies
-        run: |
-          pip install feedparser requests
+    for url in RSS_FEEDS:
+        feed = feedparser.parse(url)
+        for entry in feed.entries[:1]:
+            title = entry.title
+            link = entry.link
+            summary = entry.get("summary") or entry.get("description") or ""
+            summary = summary[:200]
 
-      - name: Fetch RSS & send to Telegram
-        run: |
-          python << 'EOF'
-          import feedparser, requests, textwrap
+            message = f"📰 {title}\n\n{summary}\n\n🔗 {link}"
 
-          BOT_TOKEN = "${TG_BOT_TOKEN}"
-          CHAT_ID = "${CHAT_ID}"
+            r = requests.post(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                data={
+                    "chat_id": CHAT_ID,
+                    "text": message
+                }
+            )
 
-          RSS_FEEDS = [
-              "https://rss.kompas.com/",
-              "https://www.cnnindonesia.com/rss",
-              "https://kbr.id/rss",
-              "https://www.bola.com/rss"
-          ]
+            if r.status_code == 200:
+                sent += 1
 
-          sent = 0
-
-          for url in RSS_FEEDS:
-              feed = feedparser.parse(url)
-              for entry in feed.entries[:2]:
-                  title = entry.title
-                  link = entry.link
-                  summary = entry.get("summary", "")[:200]
-
-                  message = f"📰 *{title}*\n\n{summary}\n\n🔗 [Baca selengkapnya]({link})"
-
-                  payload = {
-                      "chat_id": CHAT_ID,
-                      "text": message,
-                      "parse_mode": "Markdown",
-                      "disable_web_page_preview": False
-                  }
-
-                  r = requests.post(
-                      f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                      data=payload
-                  )
-
-                  if r.status_code == 200:
-                      sent += 1
-
-          print(f"Total berita terkirim: {sent}")
-          EOF
+    print("Total berita terkirim:", sent)
+    EOF
