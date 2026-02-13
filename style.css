@@ -1,58 +1,36 @@
 body {
   font-family: Arial, sans-serif;
-  background: #f4f4f4;
   margin: 0;
-  padding: 16px;
+  background: #f5f5f5;
 }
 
 header {
-  position: sticky;
-  top: 0;
-  background: #f4f4f4;
-  padding-bottom: 10px;
+  background: #111;
+  color: #fff;
+  padding: 16px;
 }
 
-h1 {
-  margin: 0;
+#news {
+  padding: 12px;
 }
 
-button {
-  margin-top: 8px;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-article {
+.article {
   background: #fff;
-  padding: 14px;
-  margin-bottom: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
   border-radius: 6px;
 }
 
-.badge {
-  display: inline-block;
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-right: 6px;
+.article h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
 }
 
-.umum {
-  background: #dbeafe;
+.article small {
+  color: #666;
 }
 
-.bola {
-  background: #fee2e2;
-}
-
-a {
-  font-weight: bold;
-  color: #000;
+.article a {
   text-decoration: none;
-}
-
-small {
-  color: #555;
+  color: #000;
 }
