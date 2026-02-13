@@ -4,24 +4,20 @@
   <meta charset="UTF-8">
   <title>NetralNews</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header>
-  <h1>📰 Netral News</h1>
-  <p>Kompas • CNN Indonesia • KBR • BeritaBolaDunia</p>
-  <button onclick="loadNews()">🔄 Refresh</button>
+  <h1>📰 NetralNews</h1>
+  <p>Kompas • CNN Indonesia • KBR • Berita Bola Dunia</p>
+  <button id="refreshBtn">🔄 Refresh</button>
 </header>
 
-<div id="news"></div>
+<main id="news">
+  <p>Loading berita...</p>
+</main>
 
 <script src="app.js"></script>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
-</script>
 </body>
 </html>
