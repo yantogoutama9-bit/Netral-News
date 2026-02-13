@@ -1,0 +1,71 @@
+name: RSS to Telegram - Netral News
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  fetch-and-send:
+    runs-on: ubuntu-latest
+
+    env:
+      TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+      CHAT_ID: "@netralnews_2026"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install feedparser requests
+
+      - name: Fetch RSS & send to Telegram
+        run: |
+          python << 'EOF'
+          import feedparser, requests, textwrap
+
+          BOT_TOKEN = "${TG_BOT_TOKEN}"
+          CHAT_ID = "${CHAT_ID}"
+
+          RSS_FEEDS = [
+              "https://rss.kompas.com/",
+              "https://www.cnnindonesia.com/rss",
+              "https://kbr.id/rss",
+              "https://www.bola.com/rss"
+          ]
+
+          sent = 0
+
+          for url in RSS_FEEDS:
+              feed = feedparser.parse(url)
+              for entry in feed.entries[:2]:
+                  title = entry.title
+                  link = entry.link
+                  summary = entry.get("summary", "")[:200]
+
+                  message = f"📰 *{title}*\n\n{summary}\n\n🔗 [Baca selengkapnya]({link})"
+
+                  payload = {
+                      "chat_id": CHAT_ID,
+                      "text": message,
+                      "parse_mode": "Markdown",
+                      "disable_web_page_preview": False
+                  }
+
+                  r = requests.post(
+                      f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                      data=payload
+                  )
+
+                  if r.status_code == 200:
+                      sent += 1
+
+          print(f"Total berita terkirim: {sent}")
+          EOF
