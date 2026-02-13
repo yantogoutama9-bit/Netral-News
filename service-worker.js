@@ -1,6 +1,8 @@
+const CACHE_NAME = "netral-news-v2"; // ← NAIKKAN VERSI
+
 self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open("netral-news-v1").then(cache => {
+    caches.open(CACHE_NAME).then(cache => {
       return cache.addAll([
         "/",
         "/index.html",
@@ -9,12 +11,22 @@ self.addEventListener("install", event => {
       ]);
     })
   );
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      )
+    )
+  );
+  self.clients.claim();
 });
 
 self.addEventListener("fetch", event => {
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
-    })
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
