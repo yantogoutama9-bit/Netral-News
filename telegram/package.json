@@ -1,0 +1,8 @@
+{
+  "name": "netral-news-telegram",
+  "version": "1.0.0",
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "xml2js": "^0.6.2"
+  }
+}
