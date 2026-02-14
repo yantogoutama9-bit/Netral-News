@@ -1,82 +1,99 @@
-- name: Run RSS Script
-  env:
-    BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-    CHAT_ID: "@netralnews_2026"
-  run: |
-    python3 - << 'EOF'
-    import os
-    import requests
-    import re
-    from datetime import datetime
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
 
-    BOT_TOKEN = os.environ["BOT_TOKEN"]
-    CHAT_ID = os.environ["CHAT_ID"]
+jobs:
+  send:
+    runs-on: ubuntu-latest
 
-    RSS_SOURCES = {
-        "ANTARA": "https://www.antaranews.com/rss/terkini.xml",
-        "KOMPAS": "https://rss.kompas.com/rss",
-        "CNN": "https://www.cnnindonesia.com/rss",
-        "BBC SPORT": "https://feeds.bbci.co.uk/sport/football/rss.xml",
-        "GOAL": "https://www.goal.com/feeds/en/news"
-    }
+    permissions:
+      contents: write
 
-    def get_rss_items(url):
-        try:
-            r = requests.get(url, timeout=15)
-            if r.status_code != 200:
-                return []
-            content = r.text
-            return re.findall(r"<item>(.*?)</item>", content, re.DOTALL)
-        except:
-            return []
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    # Load sent links
-    sent_links = set()
-    if os.path.exists("last.txt"):
-        with open("last.txt", "r") as f:
-            sent_links = set(line.strip() for line in f.readlines())
+      - name: Install requests
+        run: pip install requests
 
-    new_sent = []
-    messages = []
+      - name: Run RSS Script
+        env:
+          BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          CHAT_ID: "@netralnews_2026"
+        run: |
+          python3 - << 'EOF'
+          import os
+          import requests
+          import re
 
-    for source, url in RSS_SOURCES.items():
-        items = get_rss_items(url)
+          BOT_TOKEN = os.environ["BOT_TOKEN"]
+          CHAT_ID = os.environ["CHAT_ID"]
 
-        for item in items[:5]:  # ambil max 5 per sumber
-            title_match = re.search(r"<title>(.*?)</title>", item)
-            link_match = re.search(r"<link>(.*?)</link>", item)
+          rss_url = "https://www.antaranews.com/rss/terkini.xml"
+          response = requests.get(rss_url, timeout=10)
 
-            if not title_match or not link_match:
-                continue
+          if response.status_code != 200:
+              print("RSS gagal diakses")
+              exit()
 
-            title = re.sub('<.*?>', '', title_match.group(1))
-            link = link_match.group(1).strip()
+          content = response.text
+          items = re.findall(r"<item>(.*?)</item>", content, re.DOTALL)
 
-            if link in sent_links:
-                continue
+          if not items:
+              print("Tidak ada item RSS")
+              exit()
 
-            msg = f"📰 {source}\n{title}\n\n{link}"
-            messages.append(msg)
-            new_sent.append(link)
+          # Baca last link
+          last_link = None
+          if os.path.exists("last.txt"):
+              with open("last.txt", "r") as f:
+                  last_link = f.read().strip()
 
-    if not messages:
-        print("Tidak ada berita baru")
-        exit()
+          new_links = []
+          messages = []
 
-    # kirim urut
-    messages.reverse()
+          for item in items:
+              title_match = re.search(r"<title>(.*?)</title>", item)
+              link_match = re.search(r"<link>(.*?)</link>", item)
 
-    for msg in messages:
-        send_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        r = requests.post(send_url, data={
-            "chat_id": CHAT_ID,
-            "text": msg
-        })
-        print(r.status_code)
+              if not title_match or not link_match:
+                  continue
 
-    # simpan semua link baru
-    with open("last.txt", "a") as f:
-        for link in new_sent:
-            f.write(link + "\n")
+              title = title_match.group(1)
+              link = link_match.group(1)
 
-    EOF
+              if link == last_link:
+                  break
+
+              messages.append(f"{title}\n\n{link}")
+              new_links.append(link)
+
+          if not messages:
+              print("Tidak ada berita baru")
+              exit()
+
+          # Kirim dari yang paling lama dulu
+          messages.reverse()
+
+          for msg in messages:
+              send_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+              r = requests.post(send_url, data={
+                  "chat_id": CHAT_ID,
+                  "text": msg
+              })
+              print(r.status_code, r.text)
+
+          # Simpan link terbaru
+          with open("last.txt", "w") as f:
+              f.write(new_links[0])
+
+          EOF
+
+      - name: Commit last.txt
+        run: |
+          git config user.name "rss-bot"
+          git config user.email "bot@github.com"
+          git add last.txt
+          git commit -m "Update last RSS link" || echo "No changes"
+          git push
