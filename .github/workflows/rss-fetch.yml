@@ -1,9 +1,9 @@
-name: RSS Auto Post (No Duplicate)
+name: RSS Auto Post (Stable, 15min)
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/15 * * * *"  # Cron GitHub Actions, UTC
+  workflow_dispatch:  # Bisa juga manual trigger
 
 jobs:
   send:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Install requests
+      - name: Install dependencies
         run: pip install requests
 
       - name: Run RSS Script
@@ -28,11 +28,14 @@ jobs:
           import os
           import requests
           import re
+          from datetime import datetime
 
           BOT_TOKEN = os.environ["BOT_TOKEN"]
           CHAT_ID = os.environ["CHAT_ID"]
 
-          # Multi RSS List
+          print("=== RSS Job Started at UTC:", datetime.utcnow(), "===")
+
+          # Multi RSS sources
           RSS_SOURCES = {
               "KOMPAS": "https://rss.kompas.com/rss",
               "BISNIS": "https://www.bisnis.com/rss/all/news",
@@ -40,28 +43,33 @@ jobs:
               "GOAL (BOLA)": "https://www.goal.com/feeds/en/news"
           }
 
-          # Baca history link
+          # Load sent links
           sent_links = set()
           if os.path.exists("last.txt"):
               with open("last.txt","r") as f:
-                  sent_links = set([x.strip() for x in f.readlines() if x.strip()])
+                  sent_links = set(line.strip() for line in f.readlines() if line.strip())
 
           new_links = []
           messages = []
 
           for source, url in RSS_SOURCES.items():
               try:
-                  r = requests.get(url, timeout=12)
+                  r = requests.get(url, timeout=10)
                   if r.status_code != 200:
-                      print(f"RSS {source} gagal ({r.status_code})")
+                      print(f"[WARN] RSS {source} gagal ({r.status_code})")
                       continue
                   content = r.text
               except Exception as e:
-                  print(f"RSS {source} error: {e}")
+                  print(f"[ERROR] RSS {source} exception: {e}")
                   continue
 
               items = re.findall(r"<item>(.*?)</item>", content, re.DOTALL)
-              for item in items:
+              if not items:
+                  print(f"[INFO] RSS {source} tidak ada item")
+                  continue
+
+              # Ambil max 5 item terbaru per source
+              for item in items[:5]:
                   title_match = re.search(r"<title>(.*?)</title>", item)
                   link_match = re.search(r"<link>(.*?)</link>", item)
                   if not title_match or not link_match:
@@ -78,26 +86,27 @@ jobs:
                   new_links.append(link)
 
           if not messages:
-              print("Tidak ada berita baru")
+              print("[INFO] Tidak ada berita baru untuk dikirim")
               exit()
 
-          # Kirim dari yang paling lama dulu
+          # Kirim urut dari yang paling lama
           messages.reverse()
           new_links.reverse()
 
           for msg in messages:
               send_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-              resp = requests.post(send_url, data={
-                  "chat_id": CHAT_ID,
-                  "text": msg
-              })
-              print(resp.status_code)
+              try:
+                  resp = requests.post(send_url, data={"chat_id": CHAT_ID, "text": msg})
+                  print(f"[POST] Status: {resp.status_code}")
+              except Exception as e:
+                  print(f"[ERROR] Telegram post failed: {e}")
 
-          # Simpan semua link baru
+          # Simpan semua link baru ke last.txt
           with open("last.txt","a") as f:
-              for l in new_links:
-                  f.write(l + "\n")
+              for link in new_links:
+                  f.write(link + "\n")
 
+          print("=== RSS Job Finished at UTC:", datetime.utcnow(), "===")
           EOF
 
       - name: Commit last.txt
