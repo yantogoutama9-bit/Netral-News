@@ -22,8 +22,10 @@ jobs:
         import feedparser
         import requests
 
-        RSS_URL = "https://rss.cnnindonesia.com/nasional"
+        RSS_URL = "https://www.antaranews.com/rss/terkini.xml"
         feed = feedparser.parse(RSS_URL)
+
+        print("Jumlah entry:", len(feed.entries))
 
         if not feed.entries:
             print("RSS kosong")
@@ -33,9 +35,10 @@ jobs:
         title = latest.title
         link = latest.link
 
-        message = f"📰 {title}\n\n{link}"
+        message = f"📰 {title}\n\nBaca selengkapnya:\n{link}"
 
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
         payload = {
             "chat_id": CHAT_ID,
             "text": message
