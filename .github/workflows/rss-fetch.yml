@@ -2,13 +2,14 @@ name: RSS Auto Post
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "*/15 * * * *"
 
 jobs:
   send:
     runs-on: ubuntu-latest
     steps:
+      - name: Install requests
+        run: pip install requests
+
       - name: Send Latest RSS
         env:
           BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
@@ -27,15 +28,15 @@ jobs:
 
           content = response.text
 
-          title_match = re.search(r"<title>(.*?)</title>", content)
-          link_match = re.search(r"<link>(.*?)</link>", content)
-
-          if not title_match or not link_match:
-              print("Gagal parsing RSS")
+          items = re.findall(r"<item>(.*?)</item>", content, re.DOTALL)
+          if not items:
+              print("Tidak ada item RSS")
               exit()
 
-          title = title_match.group(1)
-          link = link_match.group(1)
+          first = items[0]
+
+          title = re.search(r"<title>(.*?)</title>", first).group(1)
+          link = re.search(r"<link>(.*?)</link>", first).group(1)
 
           message = f"{title}\n\n{link}"
 
