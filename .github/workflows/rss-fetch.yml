@@ -1,4 +1,4 @@
-name: RSS Auto Post (Auto Reset Latest)
+name: RSS Auto Post (Latest News with pubDate)
 
 on:
   schedule:
@@ -29,6 +29,7 @@ jobs:
           import requests
           from bs4 import BeautifulSoup
           from datetime import datetime
+          import email.utils as eut
 
           BOT_TOKEN = os.environ["BOT_TOKEN"]
           CHAT_ID = os.environ["CHAT_ID"]
@@ -42,13 +43,13 @@ jobs:
               "GOAL (BOLA)": "https://www.goal.com/feeds/en/news"
           }
 
-          # Load history GUID/link
-          sent_links = set()
+          # Load history: key = guid/link + pubDate
+          sent_keys = set()
           if os.path.exists("last.txt"):
               with open("last.txt","r") as f:
-                  sent_links = set(line.strip() for line in f.readlines() if line.strip())
+                  sent_keys = set(line.strip() for line in f.readlines() if line.strip())
 
-          new_links = []
+          new_keys = []
           messages = []
 
           for source, url in RSS_SOURCES.items():
@@ -67,25 +68,30 @@ jobs:
                   print(f"[INFO] RSS {source} tidak ada item")
                   continue
 
-              for item in items[:5]:  # ambil 5 berita terbaru
+              for item in items[:10]:  # ambil max 10 berita terbaru per feed
                   title_tag = item.find("title")
-                  guid_tag = item.find("guid")
                   link_tag = item.find("link")
+                  guid_tag = item.find("guid")
+                  pubdate_tag = item.find("pubDate")
 
                   title = title_tag.text.strip() if title_tag else None
-                  guid = guid_tag.text.strip() if guid_tag else None
                   link = link_tag.text.strip() if link_tag else None
+                  guid = guid_tag.text.strip() if guid_tag else None
+                  pubdate = pubdate_tag.text.strip() if pubdate_tag else None
 
-                  if not title or not (guid or link):
+                  if not title or not (link or guid):
                       continue
 
-                  key = guid if guid else link  # gunakan guid jika ada
-                  if key in sent_links:
+                  # key unik = guid/link + timestamp
+                  timestamp = pubdate if pubdate else ""
+                  key = f"{guid if guid else link}__{timestamp}"
+
+                  if key in sent_keys:
                       continue
 
                   msg = f"🗞️ {source}\n{title}\n{link if link else guid}"
                   messages.append(msg)
-                  new_links.append(key)
+                  new_keys.append(key)
 
           if not messages:
               print("[INFO] Tidak ada berita baru untuk dikirim")
@@ -93,7 +99,7 @@ jobs:
 
           # Kirim dari yang paling lama
           messages.reverse()
-          new_links.reverse()
+          new_keys.reverse()
 
           for msg in messages:
               send_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -103,12 +109,12 @@ jobs:
               except Exception as e:
                   print(f"[ERROR] Telegram post failed: {e}")
 
-          # Auto reset last.txt: simpan max 100 GUID terakhir
-          history_limit = 100
-          all_links = list(sent_links) + new_links
+          # Simpan history max 200 key
+          history_limit = 200
+          all_keys = list(sent_keys) + new_keys
           with open("last.txt","w") as f:
-              for l in all_links[-history_limit:]:
-                  f.write(l + "\n")
+              for k in all_keys[-history_limit:]:
+                  f.write(k + "\n")
 
           print("=== RSS Job Finished UTC:", datetime.utcnow(), "===")
           EOF
@@ -118,5 +124,5 @@ jobs:
           git config user.name "rss-bot"
           git config user.email "bot@github.com"
           git add last.txt
-          git commit -m "Update last RSS links" || echo "No new links"
+          git commit -m "Update last RSS keys" || echo "No new links"
           git push
