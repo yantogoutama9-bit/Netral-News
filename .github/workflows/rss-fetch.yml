@@ -1,3 +1,5 @@
+name: RSS Auto Post (No Duplicate)
+
 on:
   workflow_dispatch:
   schedule:
