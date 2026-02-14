@@ -1,4 +1,4 @@
-name: Telegram News Auto Refresh + Translate
+name: Telegram News Auto Translate Stable
 
 on:
   schedule:
@@ -6,20 +6,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  send:
+  send-news:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v3
 
       - name: Install dependencies
         run: pip install requests feedparser deep-translator
 
-      - name: Run RSS Script
+      - name: Fetch and Send News
         env:
           BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           CHAT_ID: "@netralnews_2026"
@@ -34,81 +31,55 @@ jobs:
           BOT_TOKEN = os.environ["BOT_TOKEN"]
           CHAT_ID = os.environ["CHAT_ID"]
 
-          print("=== JOB START:", datetime.utcnow(), "UTC ===")
+          print("=== START:", datetime.utcnow(), "UTC ===")
 
           RSS_SOURCES = {
               "REUTERS": "https://feeds.reuters.com/reuters/topNews",
-              "BBC": "http://feeds.bbci.co.uk/news/rss.xml",
+              "BBC": "https://feeds.bbci.co.uk/news/rss.xml",
               "ANTARA": "https://www.antaranews.com/rss/nasional.xml",
               "CNN INDONESIA": "https://www.cnnindonesia.com/rss",
-              "SKY SPORTS": "https://www.skysports.com/rss/12040",
               "ESPN SOCCER": "https://www.espn.com/espn/rss/soccer/news"
           }
 
-          FOREIGN_SOURCES = ["REUTERS", "BBC", "SKY SPORTS", "ESPN SOCCER"]
+          translator = GoogleTranslator(source='auto', target='id')
 
-          sent_links = set()
-          if os.path.exists("last.txt"):
-              with open("last.txt","r") as f:
-                  sent_links = set(x.strip() for x in f.readlines() if x.strip())
-
-          new_links = []
-          messages = []
+          total_sent = 0
 
           for source, url in RSS_SOURCES.items():
+              print("Parsing:", source)
               feed = feedparser.parse(url)
 
               if not feed.entries:
-                  print(f"[INFO] {source} kosong")
+                  print("-> Tidak ada entries dari", source)
                   continue
 
-              for entry in feed.entries[:2]:  # 2 per sumber agar seimbang
+              for entry in feed.entries[:2]:
                   title = entry.get("title", "")
                   link = entry.get("link", "")
 
-                  if not link or link in sent_links:
+                  if not link:
                       continue
 
-                  # Translate jika sumber luar
-                  if source in FOREIGN_SOURCES:
-                      try:
-                          title = GoogleTranslator(source='auto', target='id').translate(title)
-                      except:
-                          pass
+                  # Auto translate (aman)
+                  try:
+                      translated = translator.translate(title)
+                      if translated:
+                          title = translated
+                  except Exception as e:
+                      print("Translate error:", e)
 
-                  msg = f"🗞️ {source}\n{title}\n{link}"
-                  messages.append(msg)
-                  new_links.append(link)
+                  message = f"🗞️ {source}\n{title}\n{link}"
 
-          if not messages:
-              print("[INFO] Tidak ada berita baru")
-              exit()
+                  send_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                  r = requests.post(send_url, data={
+                      "chat_id": CHAT_ID,
+                      "text": message,
+                      "disable_web_page_preview": False
+                  })
 
-          messages.reverse()
-          new_links.reverse()
+                  print("Sent:", r.status_code)
+                  total_sent += 1
 
-          for msg in messages:
-              send_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-              r = requests.post(send_url, data={
-                  "chat_id": CHAT_ID,
-                  "text": msg,
-                  "disable_web_page_preview": False
-              })
-              print("[POST]", r.status_code)
-
-          history_limit = 400
-          all_links = list(sent_links) + new_links
-          with open("last.txt","w") as f:
-              for l in all_links[-history_limit:]:
-                  f.write(l + "\n")
-
-          print("=== JOB END ===")
+          print("Total terkirim:", total_sent)
+          print("=== END ===")
           EOF
-
-      - name: Commit last.txt
-        run: |
-          git config user.name "rss-bot"
-          git config user.email "bot@github.com"
-          git add last.txt
-          git commit -m "Update RSS history" || echo "No changes"
-          git push
