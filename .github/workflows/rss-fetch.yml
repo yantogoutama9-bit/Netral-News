@@ -1,4 +1,4 @@
-name: RSS Auto Post (Latest News with pubDate)
+name: Telegram Latest News (Web Scraping)
 
 on:
   schedule:
@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: pip install requests beautifulsoup4
 
-      - name: Run RSS Script
+      - name: Run Scraper Script
         env:
           BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           CHAT_ID: "@netralnews_2026"
@@ -29,69 +29,62 @@ jobs:
           import requests
           from bs4 import BeautifulSoup
           from datetime import datetime
-          import email.utils as eut
 
           BOT_TOKEN = os.environ["BOT_TOKEN"]
           CHAT_ID = os.environ["CHAT_ID"]
 
-          print("=== RSS Job Started UTC:", datetime.utcnow(), "===")
+          print("=== Scraper Job Started UTC:", datetime.utcnow(), "===")
 
-          RSS_SOURCES = {
-              "KOMPAS": "https://rss.kompas.com/rss",
-              "BISNIS": "https://www.bisnis.com/rss/all/news",
-              "CNN INDONESIA": "https://www.cnnindonesia.com/rss",
-              "GOAL (BOLA)": "https://www.goal.com/feeds/en/news"
+          # Sumber situs
+          SITES = {
+              "KOMPAS": "https://www.kompas.com/",
+              "BISNIS": "https://www.bisnis.com/",
+              "CNN INDONESIA": "https://www.cnnindonesia.com/",
+              "GOAL (BOLA)": "https://www.goal.com/id/news"
           }
 
-          # Load history: key = guid/link + pubDate
-          sent_keys = set()
+          # Load history link yang sudah dikirim
+          sent_links = set()
           if os.path.exists("last.txt"):
               with open("last.txt","r") as f:
-                  sent_keys = set(line.strip() for line in f.readlines() if line.strip())
+                  sent_links = set(line.strip() for line in f.readlines() if line.strip())
 
-          new_keys = []
+          new_links = []
           messages = []
 
-          for source, url in RSS_SOURCES.items():
+          for source, url in SITES.items():
               try:
-                  r = requests.get(url, timeout=12)
+                  r = requests.get(url, timeout=12, headers={"User-Agent": "Mozilla/5.0"})
                   if r.status_code != 200:
-                      print(f"[WARN] RSS {source} gagal ({r.status_code})")
+                      print(f"[WARN] {source} gagal diakses ({r.status_code})")
                       continue
-                  soup = BeautifulSoup(r.content, "xml")
-                  items = soup.find_all("item")
+                  soup = BeautifulSoup(r.content, "html.parser")
               except Exception as e:
-                  print(f"[ERROR] RSS {source} exception: {e}")
+                  print(f"[ERROR] {source} exception: {e}")
                   continue
 
-              if not items:
-                  print(f"[INFO] RSS {source} tidak ada item")
-                  continue
+              # Parsing per site (contoh untuk list berita utama)
+              if source == "KOMPAS":
+                  articles = soup.select("div.article__list article a")[:5]
+              elif source == "BISNIS":
+                  articles = soup.select("div.news-content a")[:5]
+              elif source == "CNN INDONESIA":
+                  articles = soup.select("article.post a")[:5]
+              elif source == "GOAL (BOLA)":
+                  articles = soup.select("div.feed-post a")[:5]
+              else:
+                  articles = []
 
-              for item in items[:10]:  # ambil max 10 berita terbaru per feed
-                  title_tag = item.find("title")
-                  link_tag = item.find("link")
-                  guid_tag = item.find("guid")
-                  pubdate_tag = item.find("pubDate")
-
-                  title = title_tag.text.strip() if title_tag else None
-                  link = link_tag.text.strip() if link_tag else None
-                  guid = guid_tag.text.strip() if guid_tag else None
-                  pubdate = pubdate_tag.text.strip() if pubdate_tag else None
-
-                  if not title or not (link or guid):
+              for a in articles:
+                  title = a.get_text(strip=True)
+                  link = a['href']
+                  if not link.startswith("http"):
+                      link = url.rstrip("/") + link
+                  if link in sent_links:
                       continue
-
-                  # key unik = guid/link + timestamp
-                  timestamp = pubdate if pubdate else ""
-                  key = f"{guid if guid else link}__{timestamp}"
-
-                  if key in sent_keys:
-                      continue
-
-                  msg = f"🗞️ {source}\n{title}\n{link if link else guid}"
+                  msg = f"🗞️ {source}\n{title}\n{link}"
                   messages.append(msg)
-                  new_keys.append(key)
+                  new_links.append(link)
 
           if not messages:
               print("[INFO] Tidak ada berita baru untuk dikirim")
@@ -99,24 +92,24 @@ jobs:
 
           # Kirim dari yang paling lama
           messages.reverse()
-          new_keys.reverse()
+          new_links.reverse()
 
           for msg in messages:
               send_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
               try:
                   resp = requests.post(send_url, data={"chat_id": CHAT_ID, "text": msg})
-                  print(f"[POST] Status: {resp.status_code}, text len: {len(msg)}")
+                  print(f"[POST] Status: {resp.status_code}, len: {len(msg)}")
               except Exception as e:
                   print(f"[ERROR] Telegram post failed: {e}")
 
-          # Simpan history max 200 key
+          # Simpan history max 200 link
           history_limit = 200
-          all_keys = list(sent_keys) + new_keys
+          all_links = list(sent_links) + new_links
           with open("last.txt","w") as f:
-              for k in all_keys[-history_limit:]:
-                  f.write(k + "\n")
+              for l in all_links[-history_limit:]:
+                  f.write(l + "\n")
 
-          print("=== RSS Job Finished UTC:", datetime.utcnow(), "===")
+          print("=== Scraper Job Finished UTC:", datetime.utcnow(), "===")
           EOF
 
       - name: Commit last.txt
@@ -124,5 +117,5 @@ jobs:
           git config user.name "rss-bot"
           git config user.email "bot@github.com"
           git add last.txt
-          git commit -m "Update last RSS keys" || echo "No new links"
+          git commit -m "Update last scraped links" || echo "No new links"
           git push
