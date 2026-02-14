@@ -1,54 +1,10 @@
-name: RSS to Telegram - Netral News
+import requests
 
-on:
-  workflow_dispatch:
+url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-jobs:
-  send:
-    runs-on: ubuntu-latest
+r = requests.post(url, data={
+    "chat_id": CHAT_ID,
+    "text": "TEST LANGSUNG TANPA RSS"
+})
 
-    steps:
-    - name: Install dependencies
-      run: pip install feedparser requests
-
-    - name: Run RSS Sender
-      env:
-        BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-        CHAT_ID: "@netralnews_2026"
-      run: |
-        python3 - << 'EOF'
-        import feedparser
-        import requests
-
-        RSS_URL = "https://www.antaranews.com/rss/terkini.xml"
-        print("Ambil RSS...")
-
-        feed = feedparser.parse(RSS_URL)
-
-        print("Jumlah entry:", len(feed.entries))
-
-        if not feed.entries:
-            print("RSS kosong dari server GitHub")
-            exit()
-
-        latest = feed.entries[0]
-        title = latest.title
-        link = latest.link
-
-        print("Judul:", title)
-        print("Link:", link)
-
-        message = f"{title}\n\n{link}"
-
-        print("Kirim ke Telegram...")
-
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-
-        r = requests.post(url, data={
-            "chat_id": CHAT_ID,
-            "text": message
-        })
-
-        print("Status:", r.status_code)
-        print("Response:", r.text)
-        EOF
+print(r.status_code, r.text)
