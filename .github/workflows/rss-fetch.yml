@@ -1,8 +1,8 @@
-name: Telegram News Auto Post (15 min)
+name: Telegram News Auto Refresh (15 min)
 
 on:
   schedule:
-    - cron: "*/15 * * * *"  # UTC
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 feedparser
+        run: pip install requests feedparser
 
       - name: Run RSS Script
         env:
@@ -33,50 +33,46 @@ jobs:
           BOT_TOKEN = os.environ["BOT_TOKEN"]
           CHAT_ID = os.environ["CHAT_ID"]
 
-          print("=== RSS Job Started UTC:", datetime.utcnow(), "===")
+          print("=== JOB START:", datetime.utcnow(), "UTC ===")
 
           RSS_SOURCES = {
-              "CNA": "https://www.cna.id/api/v1/rss-outbound-feed?_format=xml",
-              "WORLD NEWS INTL": "https://www.worldnewsintl.org/feed",
-              "AMAR MEDIA NASIONAL": "https://amarmedia.co.id/rss/latest-posts",
-              "AMAR MEDIA POLITIK": "https://amarmedia.co.id/rss/category/politik",
-              "AMAR MEDIA OLAHRAGA": "https://amarmedia.co.id/rss/category/olahraga"
+              "REUTERS TOP": "https://feeds.reuters.com/reuters/topNews",
+              "REUTERS WORLD": "https://feeds.reuters.com/reuters/worldNews",
+              "BBC NEWS": "http://feeds.bbci.co.uk/news/rss.xml",
+              "BBC WORLD": "http://feeds.bbci.co.uk/news/world/rss.xml",
+              "SKY SPORTS FOOTBALL": "https://www.skysports.com/rss/12040",
+              "ESPN SOCCER": "https://www.espn.com/espn/rss/soccer/news"
           }
 
-          # Load sent links history
           sent_links = set()
           if os.path.exists("last.txt"):
-              with open("last.txt", "r") as f:
-                  sent_links = set(line.strip() for line in f.readlines() if line.strip())
+              with open("last.txt","r") as f:
+                  sent_links = set(x.strip() for x in f.readlines() if x.strip())
 
           new_links = []
           messages = []
 
           for source, url in RSS_SOURCES.items():
-              try:
-                  feed = feedparser.parse(url)
-              except Exception as e:
-                  print(f"[ERROR] Parsing {source}: {e}")
-                  continue
+              feed = feedparser.parse(url)
 
               if not feed.entries:
-                  print(f"[INFO] {source} tidak ada item")
+                  print(f"[INFO] {source} kosong")
                   continue
 
-              for entry in feed.entries[:10]:  # ambil max 10 terbaru per feed
-                  title = entry.title
-                  link = entry.link
-                  key = link  # gunakan link sebagai identifier
+              # Maksimal 3 per sumber agar seimbang
+              for entry in feed.entries[:3]:
+                  title = entry.get("title", "")
+                  link = entry.get("link", "")
 
-                  if key in sent_links:
+                  if not link or link in sent_links:
                       continue
 
                   msg = f"🗞️ {source}\n{title}\n{link}"
                   messages.append(msg)
-                  new_links.append(key)
+                  new_links.append(link)
 
           if not messages:
-              print("[INFO] Tidak ada berita baru untuk dikirim")
+              print("[INFO] Tidak ada berita baru")
               exit()
 
           # Kirim dari yang paling lama
@@ -85,20 +81,21 @@ jobs:
 
           for msg in messages:
               send_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-              try:
-                  resp = requests.post(send_url, data={"chat_id": CHAT_ID, "text": msg})
-                  print(f"[POST] Status: {resp.status_code}, len: {len(msg)}")
-              except Exception as e:
-                  print(f"[ERROR] Telegram post failed: {e}")
+              r = requests.post(send_url, data={
+                  "chat_id": CHAT_ID,
+                  "text": msg,
+                  "disable_web_page_preview": False
+              })
+              print("[POST]", r.status_code)
 
-          # Simpan history max 200 link
-          history_limit = 200
+          # Simpan max 300 history
+          history_limit = 300
           all_links = list(sent_links) + new_links
           with open("last.txt","w") as f:
               for l in all_links[-history_limit:]:
                   f.write(l + "\n")
 
-          print("=== RSS Job Finished UTC:", datetime.utcnow(), "===")
+          print("=== JOB END ===")
           EOF
 
       - name: Commit last.txt
@@ -106,5 +103,5 @@ jobs:
           git config user.name "rss-bot"
           git config user.email "bot@github.com"
           git add last.txt
-          git commit -m "Update last RSS links" || echo "No new links"
+          git commit -m "Update RSS history" || echo "No changes"
           git push
