@@ -32,44 +32,50 @@ jobs:
           BOT_TOKEN = os.environ["BOT_TOKEN"]
           CHAT_ID = os.environ["CHAT_ID"]
 
-          rss_url = "https://www.antaranews.com/rss/terkini.xml"
-          response = requests.get(rss_url, timeout=10)
+          # Multi RSS List
+          RSS_SOURCES = {
+              "KOMPAS": "https://rss.kompas.com/rss",
+              "BISNIS": "https://www.bisnis.com/rss/all/news",
+              "CNN INDONESIA": "https://www.cnnindonesia.com/rss",
+              "GOAL (BOLA)": "https://www.goal.com/feeds/en/news"
+          }
 
-          if response.status_code != 200:
-              print("RSS gagal diakses")
-              exit()
-
-          content = response.text
-          items = re.findall(r"<item>(.*?)</item>", content, re.DOTALL)
-
-          if not items:
-              print("Tidak ada item RSS")
-              exit()
-
-          # Baca last link
-          last_link = None
+          # Baca history link
+          sent_links = set()
           if os.path.exists("last.txt"):
-              with open("last.txt", "r") as f:
-                  last_link = f.read().strip()
+              with open("last.txt","r") as f:
+                  sent_links = set([x.strip() for x in f.readlines() if x.strip()])
 
           new_links = []
           messages = []
 
-          for item in items:
-              title_match = re.search(r"<title>(.*?)</title>", item)
-              link_match = re.search(r"<link>(.*?)</link>", item)
-
-              if not title_match or not link_match:
+          for source, url in RSS_SOURCES.items():
+              try:
+                  r = requests.get(url, timeout=12)
+                  if r.status_code != 200:
+                      print(f"RSS {source} gagal ({r.status_code})")
+                      continue
+                  content = r.text
+              except Exception as e:
+                  print(f"RSS {source} error: {e}")
                   continue
 
-              title = title_match.group(1)
-              link = link_match.group(1)
+              items = re.findall(r"<item>(.*?)</item>", content, re.DOTALL)
+              for item in items:
+                  title_match = re.search(r"<title>(.*?)</title>", item)
+                  link_match = re.search(r"<link>(.*?)</link>", item)
+                  if not title_match or not link_match:
+                      continue
 
-              if link == last_link:
-                  break
+                  title = re.sub('<.*?>','', title_match.group(1)).strip()
+                  link = link_match.group(1).strip()
 
-              messages.append(f"{title}\n\n{link}")
-              new_links.append(link)
+                  if link in sent_links:
+                      continue
+
+                  msg = f"🗞️ {source}\n{title}\n{link}"
+                  messages.append(msg)
+                  new_links.append(link)
 
           if not messages:
               print("Tidak ada berita baru")
@@ -77,18 +83,20 @@ jobs:
 
           # Kirim dari yang paling lama dulu
           messages.reverse()
+          new_links.reverse()
 
           for msg in messages:
               send_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-              r = requests.post(send_url, data={
+              resp = requests.post(send_url, data={
                   "chat_id": CHAT_ID,
                   "text": msg
               })
-              print(r.status_code, r.text)
+              print(resp.status_code)
 
-          # Simpan link terbaru
-          with open("last.txt", "w") as f:
-              f.write(new_links[0])
+          # Simpan semua link baru
+          with open("last.txt","a") as f:
+              for l in new_links:
+                  f.write(l + "\n")
 
           EOF
 
@@ -97,5 +105,5 @@ jobs:
           git config user.name "rss-bot"
           git config user.email "bot@github.com"
           git add last.txt
-          git commit -m "Update last RSS link" || echo "No changes"
+          git commit -m "Update last RSS links" || echo "No new links"
           git push
