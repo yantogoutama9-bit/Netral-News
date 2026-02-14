@@ -1,4 +1,4 @@
-name: RSS Auto Post (Telegram Stable)
+name: RSS Auto Post (Stable Latest News)
 
 on:
   schedule:
@@ -33,9 +33,8 @@ jobs:
           BOT_TOKEN = os.environ["BOT_TOKEN"]
           CHAT_ID = os.environ["CHAT_ID"]
 
-          print("=== RSS Job Started at UTC:", datetime.utcnow(), "===")
+          print("=== RSS Job Started UTC:", datetime.utcnow(), "===")
 
-          # Multi RSS sources
           RSS_SOURCES = {
               "KOMPAS": "https://rss.kompas.com/rss",
               "BISNIS": "https://www.bisnis.com/rss/all/news",
@@ -43,7 +42,7 @@ jobs:
               "GOAL (BOLA)": "https://www.goal.com/feeds/en/news"
           }
 
-          # Load sent links
+          # Load sent GUID/link history
           sent_links = set()
           if os.path.exists("last.txt"):
               with open("last.txt","r") as f:
@@ -58,7 +57,7 @@ jobs:
                   if r.status_code != 200:
                       print(f"[WARN] RSS {source} gagal ({r.status_code})")
                       continue
-                  soup = BeautifulSoup(r.content, features="xml")
+                  soup = BeautifulSoup(r.content, "xml")
                   items = soup.find_all("item")
               except Exception as e:
                   print(f"[ERROR] RSS {source} exception: {e}")
@@ -68,21 +67,25 @@ jobs:
                   print(f"[INFO] RSS {source} tidak ada item")
                   continue
 
-              # Ambil max 5 item terbaru per source
-              for item in items[:5]:
+              for item in items[:5]:  # ambil 5 berita terbaru
                   title_tag = item.find("title")
+                  guid_tag = item.find("guid")
                   link_tag = item.find("link")
-                  if not title_tag or not link_tag:
-                      continue
-                  title = title_tag.text.strip()
-                  link = link_tag.text.strip()
 
-                  if link in sent_links:
+                  title = title_tag.text.strip() if title_tag else None
+                  guid = guid_tag.text.strip() if guid_tag else None
+                  link = link_tag.text.strip() if link_tag else None
+
+                  if not title or not (guid or link):
                       continue
 
-                  msg = f"🗞️ {source}\n{title}\n{link}"
+                  key = guid if guid else link  # gunakan guid jika ada
+                  if key in sent_links:
+                      continue
+
+                  msg = f"🗞️ {source}\n{title}\n{link if link else guid}"
                   messages.append(msg)
-                  new_links.append(link)
+                  new_links.append(key)
 
           if not messages:
               print("[INFO] Tidak ada berita baru untuk dikirim")
@@ -96,16 +99,16 @@ jobs:
               send_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
               try:
                   resp = requests.post(send_url, data={"chat_id": CHAT_ID, "text": msg})
-                  print(f"[POST] Status: {resp.status_code}, text length: {len(msg)}")
+                  print(f"[POST] Status: {resp.status_code}, text len: {len(msg)}")
               except Exception as e:
                   print(f"[ERROR] Telegram post failed: {e}")
 
-          # Simpan semua link baru ke last.txt
+          # Simpan semua GUID/link baru ke last.txt
           with open("last.txt","a") as f:
-              for link in new_links:
-                  f.write(link + "\n")
+              for l in new_links:
+                  f.write(l + "\n")
 
-          print("=== RSS Job Finished at UTC:", datetime.utcnow(), "===")
+          print("=== RSS Job Finished UTC:", datetime.utcnow(), "===")
           EOF
 
       - name: Commit last.txt
