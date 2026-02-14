@@ -3,14 +3,19 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js");
 }
 
-// AMBIL CONTAINER (INI YANG SEBELUMNYA HILANG)
+// AMBIL CONTAINER
 const newsContainer = document.getElementById("news");
 
-// RSS FEEDS
+// RSS FEEDS (Nasional + Sepak Bola)
 const feeds = [
   { source: "Kompas", url: "https://rss.kompas.com/news" },
   { source: "CNN Indonesia", url: "https://www.cnnindonesia.com/rss" },
-  { source: "KBR", url: "https://kbr.id/rss" }
+  { source: "KBR", url: "https://kbr.id/rss" },
+
+  // Sepak Bola Internasional
+  { source: "BBC Sport", url: "https://feeds.bbci.co.uk/sport/football/rss.xml" },
+  { source: "ESPN Soccer", url: "https://www.espn.com/espn/rss/soccer/news" },
+  { source: "Sky Sports", url: "https://www.skysports.com/rss/12040" }
 ];
 
 async function loadRSS() {
@@ -40,7 +45,10 @@ async function loadRSS() {
     }
   }
 
+  // Urutkan berdasarkan tanggal terbaru
   articles.sort((a, b) => b.date - a.date);
+
+  // Ambil 30 berita terbaru
   renderNews(articles.slice(0, 30));
 }
 
