@@ -1,17 +1,50 @@
-name: Test Telegram
+name: RSS Auto Post
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
 
 jobs:
   send:
     runs-on: ubuntu-latest
     steps:
-      - name: Send Test
+      - name: Send Latest RSS
         env:
           BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           CHAT_ID: "@netralnews_2026"
         run: |
-          curl -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
-          -d chat_id=$CHAT_ID \
-          -d text="TEST WORKFLOW FIX"
+          python3 - << 'EOF'
+          import requests
+          import re
+
+          rss_url = "https://www.antaranews.com/rss/terkini.xml"
+          response = requests.get(rss_url, timeout=10)
+
+          if response.status_code != 200:
+              print("RSS gagal diakses")
+              exit()
+
+          content = response.text
+
+          title_match = re.search(r"<title>(.*?)</title>", content)
+          link_match = re.search(r"<link>(.*?)</link>", content)
+
+          if not title_match or not link_match:
+              print("Gagal parsing RSS")
+              exit()
+
+          title = title_match.group(1)
+          link = link_match.group(1)
+
+          message = f"{title}\n\n{link}"
+
+          send_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+          r = requests.post(send_url, data={
+              "chat_id": CHAT_ID,
+              "text": message
+          })
+
+          print(r.status_code, r.text)
+          EOF
