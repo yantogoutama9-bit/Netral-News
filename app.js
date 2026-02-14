@@ -1,9 +1,8 @@
-// REGISTER SERVICE WORKER
+// REGISTER SERVICE WORKER (opsional, tapi aman)
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js");
 }
 
-// AMBIL CONTAINER
 const newsContainer = document.getElementById("news");
 
 // RSS FEEDS (Nasional + Sepak Bola)
@@ -12,7 +11,6 @@ const feeds = [
   { source: "CNN Indonesia", url: "https://www.cnnindonesia.com/rss" },
   { source: "KBR", url: "https://kbr.id/rss" },
 
-  // Sepak Bola Internasional
   { source: "BBC Sport", url: "https://feeds.bbci.co.uk/sport/football/rss.xml" },
   { source: "ESPN Soccer", url: "https://www.espn.com/espn/rss/soccer/news" },
   { source: "Sky Sports", url: "https://www.skysports.com/rss/12040" }
@@ -24,10 +22,14 @@ async function loadRSS() {
 
   for (const feed of feeds) {
     try {
-      const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`;
-      const res = await fetch(api);
-      const data = await res.json();
+      // Anti cache rss2json
+      const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}&t=${Date.now()}`;
 
+      const res = await fetch(api, {
+        cache: "no-store"
+      });
+
+      const data = await res.json();
       if (!data.items) continue;
 
       data.items.forEach(item => {
@@ -45,10 +47,9 @@ async function loadRSS() {
     }
   }
 
-  // Urutkan berdasarkan tanggal terbaru
+  // Urutkan terbaru
   articles.sort((a, b) => b.date - a.date);
 
-  // Ambil 30 berita terbaru
   renderNews(articles.slice(0, 30));
 }
 
@@ -82,8 +83,10 @@ function stripHTML(html) {
   return div.textContent || "";
 }
 
-// LOAD AWAL
+// LOAD SAAT HALAMAN DIBUKA / REFRESH
 loadRSS();
 
-// AUTO REFRESH 15 MENIT
-setInterval(loadRSS, 15 * 60 * 1000);
+// AUTO UPDATE TIAP 15 MENIT
+setInterval(() => {
+  loadRSS();
+}, 15 * 60 * 1000);
