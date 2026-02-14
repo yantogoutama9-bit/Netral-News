@@ -1,4 +1,4 @@
-name: RSS Auto Post (Stable Latest News)
+name: RSS Auto Post (Auto Reset Latest)
 
 on:
   schedule:
@@ -42,7 +42,7 @@ jobs:
               "GOAL (BOLA)": "https://www.goal.com/feeds/en/news"
           }
 
-          # Load sent GUID/link history
+          # Load history GUID/link
           sent_links = set()
           if os.path.exists("last.txt"):
               with open("last.txt","r") as f:
@@ -103,9 +103,11 @@ jobs:
               except Exception as e:
                   print(f"[ERROR] Telegram post failed: {e}")
 
-          # Simpan semua GUID/link baru ke last.txt
-          with open("last.txt","a") as f:
-              for l in new_links:
+          # Auto reset last.txt: simpan max 100 GUID terakhir
+          history_limit = 100
+          all_links = list(sent_links) + new_links
+          with open("last.txt","w") as f:
+              for l in all_links[-history_limit:]:
                   f.write(l + "\n")
 
           print("=== RSS Job Finished UTC:", datetime.utcnow(), "===")
