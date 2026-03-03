@@ -1,21 +1,858 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Netral News</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netral News - Berita Netral & Terpercaya</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #f59e0b;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --glass: rgba(255, 255, 255, 0.95);
+            --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
 
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--dark);
+            overflow-x: hidden;
+        }
+
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: moveGrid 20s linear infinite;
+        }
+
+        @keyframes moveGrid {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        header {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .logo-text {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--dark) 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-subtitle {
+            font-size: 0.75rem;
+            color: var(--gray);
+            font-weight: 500;
+            letter-spacing: 0.05em;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .refresh-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+            background: var(--primary-dark);
+        }
+
+        .refresh-btn.spinning {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .filter-section {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .filter-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .filter-label {
+            color: white;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: block;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 0.6rem 1.25rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: white;
+            color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        .section-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 2rem;
+        }
+
+        .news-card {
+            background: var(--glass);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255,255,255,0.3);
+            backdrop-filter: blur(20px);
+            position: relative;
+        }
+
+        .news-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transform: scaleX(0);
+            transition: transform 0.4s ease;
+        }
+
+        .news-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .news-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .news-image {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        .news-card:hover .news-image {
+            transform: scale(1.1);
+        }
+
+        .news-content {
+            padding: 1.75rem;
+        }
+
+        .news-source {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+        }
+
+        .news-source.bbc { color: #bb1919; background: rgba(187, 25, 25, 0.1); }
+        .news-source.jakarta-post { color: #0056b3; background: rgba(0, 86, 179, 0.1); }
+        .news-source.manchester { color: #7c2d12; background: rgba(124, 45, 18, 0.1); }
+        .news-source.cnn { color: #cc0000; background: rgba(204, 0, 0, 0.1); }
+        .news-source.kompas { color: #00599c; background: rgba(0, 89, 156, 0.1); }
+        .news-source.espn { color: #b91c1c; background: rgba(185, 28, 28, 0.1); }
+        .news-source.natgeo { color: #fcd34d; background: rgba(252, 211, 77, 0.2); color: #92400e; }
+
+        .news-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            line-height: 1.4;
+            margin-bottom: 0.75rem;
+            color: var(--dark);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .news-description {
+            font-size: 0.95rem;
+            color: var(--gray);
+            line-height: 1.6;
+            margin-bottom: 1.25rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .news-date {
+            font-size: 0.85rem;
+            color: var(--gray);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .read-more {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: gap 0.3s ease;
+        }
+
+        .read-more:hover {
+            gap: 0.8rem;
+        }
+
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem;
+            color: white;
+            grid-column: 1 / -1;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1.5rem;
+        }
+
+        .loading-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 1.5rem 2rem;
+            border-radius: 16px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            grid-column: 1 / -1;
+        }
+
+        footer {
+            background: rgba(15, 23, 42, 0.95);
+            color: white;
+            padding: 3rem 2rem;
+            margin-top: 4rem;
+            backdrop-filter: blur(20px);
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+        }
+
+        .footer-section h3 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: var(--secondary);
+        }
+
+        .footer-section p, .footer-section a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            line-height: 1.8;
+            transition: color 0.3s ease;
+        }
+
+        .footer-section a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            max-width: 1400px;
+            margin: 3rem auto 0;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .news-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+
+            main {
+                padding: 2rem 1rem;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.5);
+        }
+
+        .translate-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.7rem;
+            color: var(--gray);
+            font-style: italic;
+            margin-top: 0.5rem;
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <h1>Netral News</h1>
-    <p>Berita cepat & netral</p>
-  </header>
+    <div class="bg-animation"></div>
 
-  <main id="news"></main>
+    <header>
+        <div class="header-container">
+            <a href="#" class="logo">
+                <div class="logo-icon">📰</div>
+                <div>
+                    <div class="logo-text">Netral News</div>
+                    <div class="logo-subtitle">Berita Cepat & Netral</div>
+                </div>
+            </a>
+            <div class="header-controls">
+                <button class="refresh-btn" onclick="loadNews()">
+                    <span>🔄</span>
+                    <span>Perbarui Berita</span>
+                </button>
+            </div>
+        </div>
+    </header>
 
-  <script src="app.js"></script>
+    <div class="filter-section">
+        <div class="filter-container">
+            <span class="filter-label">Filter Sumber Berita</span>
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterNews('all')">Semua</button>
+                <button class="filter-btn" onclick="filterNews('bbc')">BBC</button>
+                <button class="filter-btn" onclick="filterNews('jakarta-post')">The Jakarta Post</button>
+                <button class="filter-btn" onclick="filterNews('manchester')">Manchester News</button>
+                <button class="filter-btn" onclick="filterNews('espn')">ESPN Sports</button>
+                <button class="filter-btn" onclick="filterNews('natgeo')">National Geographic</button>
+                <button class="filter-btn" onclick="filterNews('cnn')">CNN Indonesia</button>
+                <button class="filter-btn" onclick="filterNews('kompas')">Kompas</button>
+            </div>
+        </div>
+    </div>
+
+    <main>
+        <h2 class="section-title">
+            <span>🔥</span>
+            <span>Berita Terkini</span>
+        </h2>
+        <div id="news-container" class="news-grid">
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Memuat berita terbaru...</div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Tentang Netral News</h3>
+                <p>Platform agregator berita yang menyajikan informasi terkini dari berbagai sumber terpercaya dengan tampilan yang elegan dan mudah dibaca.</p>
+            </div>
+            <div class="footer-section">
+                <h3>Sumber Berita</h3>
+                <p><a href="#">BBC News</a></p>
+                <p><a href="#">The Jakarta Post</a></p>
+                <p><a href="#">Manchester Evening News</a></p>
+                <p><a href="#">ESPN Sports</a></p>
+                <p><a href="#">National Geographic</a></p>
+                <p><a href="#">CNN Indonesia</a></p>
+                <p><a href="#">Kompas</a></p>
+            </div>
+            <div class="footer-section">
+                <h3>Kontak</h3>
+                <p>Email: info@netralnews.id</p>
+                <p>Twitter: @NetralNews</p>
+                <p>Instagram: @netralnews</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 Netral News. All rights reserved. | Dibuat dengan ❤️ di Indonesia</p>
+        </div>
+    </footer>
+
+    <script>
+        // Cache untuk terjemahan
+        const translationCache = new Map();
+        
+        // Sumber berita RSS dengan CORS proxy
+        const newsSources = [
+            {
+                name: 'BBC Indonesia',
+                id: 'bbc-indonesia',
+                url: 'https://feeds.bbci.co.uk/indonesia/rss.xml',
+                proxy: 'https://api.allorigins.win/get?url=',
+                language: 'id'
+            },
+            {
+                name: 'BBC World',
+                id: 'bbc-world',
+                url: 'http://feeds.bbci.co.uk/news/world/rss.xml',
+                proxy: 'https://api.allorigins.win/get?url=',
+                language: 'en'
+            },
+            {
+                name: 'The Jakarta Post',
+                id: 'jakarta-post',
+                url: 'https://www.thejakartapost.com/rss',
+                proxy: 'https://api.allorigins.win/get?url=',
+                language: 'en'
+            },
+            {
+                name: 'Manchester Evening News',
+                id: 'manchester',
+                url: 'https://www.manchestereveningnews.co.uk/?service=rss',
+                proxy: 'https://api.allorigins.win/get?url=',
+                language: 'en'
+            },
+            {
+                name: 'ESPN Sports',
+                id: 'espn',
+                url: 'https://www.espn.com/espn/rss/news',
+                proxy: 'https://api.allorigins.win/get?url=',
+                language: 'en'
+            },
+            {
+                name: 'National Geographic',
+                id: 'natgeo',
+                url: 'https://www.nationalgeographic.com/rss/science.rss',
+                proxy: 'https://api.allorigins.win/get?url=',
+                language: 'en'
+            },
+            {
+                name: 'CNN Indonesia',
+                id: 'cnn',
+                url: 'https://www.cnnindonesia.com/nasional/rss',
+                proxy: 'https://api.allorigins.win/get?url=',
+                language: 'id'
+            },
+            {
+                name: 'Kompas',
+                id: 'kompas',
+                url: 'https://www.kompas.com/rss',
+                proxy: 'https://api.allorigins.win/get?url=',
+                language: 'id'
+            }
+        ];
+
+        let currentFilter = 'all';
+        let allNews = [];
+
+        // Fungsi untuk parsing RSS
+        function parseRSS(xmlText, source) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+            const items = xmlDoc.querySelectorAll('item');
+            const news = [];
+
+            items.forEach((item, index) => {
+                if (index >= 8) return; // Ambil 8 berita per sumber
+                
+                const title = item.querySelector('title')?.textContent || '';
+                const description = item.querySelector('description')?.textContent || '';
+                const link = item.querySelector('link')?.textContent || '';
+                const pubDate = item.querySelector('pubDate')?.textContent || '';
+                
+                // Extract image from content:encoded or media:content
+                let image = '';
+                const content = item.querySelector('content\\:encoded, encoded')?.textContent || '';
+                const mediaContent = item.querySelector('media\\:content, content');
+                const enclosure = item.querySelector('enclosure');
+                
+                if (mediaContent) {
+                    image = mediaContent.getAttribute('url');
+                } else if (enclosure) {
+                    image = enclosure.getAttribute('url');
+                } else {
+                    const imgMatch = content.match(/<img[^>]+src="([^">]+)"/);
+                    if (imgMatch) image = imgMatch[1];
+                }
+
+                // Default image if none found
+                if (!image) {
+                    const defaultImages = {
+                        'bbc-indonesia': 'https://via.placeholder.com/400x220/bb1919/ffffff?text=BBC+Indonesia',
+                        'bbc-world': 'https://via.placeholder.com/400x220/bb1919/ffffff?text=BBC+World',
+                        'jakarta-post': 'https://via.placeholder.com/400x220/0056b3/ffffff?text=Jakarta+Post',
+                        'manchester': 'https://via.placeholder.com/400x220/7c2d12/ffffff?text=Manchester+News',
+                        'espn': 'https://via.placeholder.com/400x220/b91c1c/ffffff?text=ESPN+Sports',
+                        'natgeo': 'https://via.placeholder.com/400x220/fcd34d/92400e?text=National+Geographic',
+                        'cnn': 'https://via.placeholder.com/400x220/cc0000/ffffff?text=CNN+Indonesia',
+                        'kompas': 'https://via.placeholder.com/400x220/00599c/ffffff?text=Kompas'
+                    };
+                    image = defaultImages[source.id] || 'https://via.placeholder.com/400x220/666/fff?text=News';
+                }
+
+                news.push({
+                    title,
+                    description,
+                    link,
+                    pubDate: new Date(pubDate),
+                    image,
+                    source: source.name,
+                    sourceId: source.id,
+                    language: source.language
+                });
+            });
+
+            return news;
+        }
+
+        // Fungsi untuk menerjemahkan teks menggunakan MyMemory API (gratis)
+        async function translateText(text, fromLang = 'en') {
+            if (!text || fromLang === 'id') return text;
+            
+            const cacheKey = `${text}_${fromLang}_id`;
+            if (translationCache.has(cacheKey)) {
+                return translationCache.get(cacheKey);
+            }
+
+            try {
+                // Batasi panjang teks untuk API gratis
+                const truncatedText = text.substring(0, 400);
+                const encodedText = encodeURIComponent(truncatedText);
+                const url = `https://api.mymemory.translated.net/get?q=${encodedText}&langpair=${fromLang}|id`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.responseStatus === 200) {
+                    const translated = data.responseData.translatedText;
+                    translationCache.set(cacheKey, translated);
+                    return translated;
+                }
+                return text;
+            } catch (error) {
+                console.error('Translation error:', error);
+                return text;
+            }
+        }
+
+        // Fungsi untuk memuat berita dari satu sumber
+        async function loadSource(source) {
+            try {
+                const response = await fetch(source.proxy + encodeURIComponent(source.url));
+                const data = await response.json();
+                
+                if (data.contents) {
+                    const news = parseRSS(data.contents, source);
+                    
+                    // Terjemahkan berita bahasa Inggris
+                    if (source.language === 'en') {
+                        for (let item of news) {
+                            item.originalTitle = item.title;
+                            item.originalDescription = item.description;
+                            item.title = await translateText(item.title, 'en');
+                            item.description = await translateText(item.description, 'en');
+                            item.isTranslated = true;
+                        }
+                    }
+                    
+                    return news;
+                }
+                return [];
+            } catch (error) {
+                console.error(`Error loading ${source.name}:`, error);
+                return [];
+            }
+        }
+
+        // Fungsi utama untuk memuat semua berita
+        async function loadNews() {
+            const container = document.getElementById('news-container');
+            const refreshBtn = document.querySelector('.refresh-btn');
+            
+            refreshBtn.classList.add('spinning');
+            container.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Memuat berita terbaru...</div>
+                </div>
+            `;
+
+            try {
+                // Load semua sumber secara paralel dengan delay untuk menghindari rate limit
+                const newsArrays = [];
+                for (const source of newsSources) {
+                    const news = await loadSource(source);
+                    newsArrays.push(news);
+                    // Delay 500ms antara request untuk menghindari rate limit API
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                // Gabungkan dan urutkan berita
+                allNews = newsArrays.flat().sort((a, b) => b.pubDate - a.pubDate);
+                
+                displayNews();
+            } catch (error) {
+                console.error('Error loading news:', error);
+                container.innerHTML = `
+                    <div class="error-message">
+                        <h3>⚠️ Gagal Memuat Berita</h3>
+                        <p>Silakan coba lagi nanti atau periksa koneksi internet Anda.</p>
+                    </div>
+                `;
+            } finally {
+                refreshBtn.classList.remove('spinning');
+            }
+        }
+
+        // Fungsi untuk menampilkan berita
+        function displayNews() {
+            const container = document.getElementById('news-container');
+            
+            const filteredNews = currentFilter === 'all' 
+                ? allNews 
+                : allNews.filter(news => news.sourceId.includes(currentFilter));
+
+            if (filteredNews.length === 0) {
+                container.innerHTML = `
+                    <div class="error-message">
+                        <p>Tidak ada berita ditemukan untuk filter ini.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredNews.map(news => {
+                const sourceClass = news.sourceId.split('-')[0];
+                return `
+                <article class="news-card" data-source="${news.sourceId}">
+                    <img src="${news.image}" alt="${news.title}" class="news-image" onerror="this.src='https://via.placeholder.com/400x220/666/fff?text=News'">
+                    <div class="news-content">
+                        <span class="news-source ${sourceClass}">${news.source}</span>
+                        <h3 class="news-title">${news.title}</h3>
+                        <p class="news-description">${news.description}</p>
+                        ${news.isTranslated ? '<span class="translate-badge">🌐 Diterjemahkan dari Inggris</span>' : ''}
+                        <div class="news-meta">
+                            <span class="news-date">📅 ${formatDate(news.pubDate)}</span>
+                            <a href="${news.link}" target="_blank" class="read-more">
+                                Baca Selengkapnya →
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            `}).join('');
+        }
+
+        // Fungsi untuk memformat tanggal
+        function formatDate(date) {
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            return date.toLocaleDateString('id-ID', options);
+        }
+
+        // Fungsi filter
+        function filterNews(source) {
+            currentFilter = source;
+            
+            // Update tombol aktif
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            displayNews();
+        }
+
+        // Load berita saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', loadNews);
+
+        // Auto refresh setiap 30 menit
+        setInterval(loadNews, 30 * 60 * 1000);
+    </script>
 </body>
 </html>
