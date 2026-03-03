@@ -549,13 +549,13 @@
             </div>
             <div class="footer-section">
                 <h3>Kontak</h3>
-                <p>Email: -</p>
-                <p>Twitter: -</p>
-                <p>Instagram: -</p>
+                <p>Email: info@netralnews.id</p>
+                <p>Twitter: @NetralNews</p>
+                <p>Instagram: @netralnews</p>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2026 Netral News. All rights reserved. | Dibuat dengan ❤️ di Indonesia</p>
+            <p>&copy; 2024 Netral News. All rights reserved. | Dibuat dengan ❤️ di Indonesia</p>
         </div>
     </footer>
 
@@ -563,7 +563,7 @@
         // Cache untuk terjemahan
         const translationCache = new Map();
         
-        // Sumber berita RSS dengan CORS proxy - URL yang sudah diperbaiki
+        // Sumber berita RSS dengan URL yang sudah diperbaiki berdasarkan hasil pencarian
         const newsSources = [
             {
                 name: 'BBC Indonesia',
@@ -649,7 +649,7 @@
                     const link = item.querySelector('link')?.textContent?.trim() || '';
                     let pubDate = item.querySelector('pubDate')?.textContent?.trim() || '';
                     
-                    // Bersihkan HTML tags dari description
+                    // Bersihkan HTML tags dari deskripsi
                     description = description.replace(/<[^>]*>/g, '').substring(0, 200) + '...';
                     
                     // Extract image dari berbagai kemungkinan
