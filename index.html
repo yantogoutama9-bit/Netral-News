@@ -510,7 +510,7 @@
                 <button class="filter-btn" onclick="filterNews('bbc')">BBC</button>
                 <button class="filter-btn" onclick="filterNews('jakarta-post')">The Jakarta Post</button>
                 <button class="filter-btn" onclick="filterNews('manchester')">Manchester News</button>
-                <button class="filter-btn" onclick="filterNews('espn')">ESPN Sports</button>
+                <button class="filter-btn" onclick="filterNews('espn')">ESPN Bola</button>
                 <button class="filter-btn" onclick="filterNews('natgeo')">National Geographic</button>
                 <button class="filter-btn" onclick="filterNews('cnn')">CNN Indonesia</button>
                 <button class="filter-btn" onclick="filterNews('kompas')">Kompas</button>
@@ -542,20 +542,20 @@
                 <p><a href="#">BBC News</a></p>
                 <p><a href="#">The Jakarta Post</a></p>
                 <p><a href="#">Manchester Evening News</a></p>
-                <p><a href="#">ESPN Sports</a></p>
+                <p><a href="#">ESPN Bola</a></p>
                 <p><a href="#">National Geographic</a></p>
                 <p><a href="#">CNN Indonesia</a></p>
                 <p><a href="#">Kompas</a></p>
             </div>
             <div class="footer-section">
                 <h3>Kontak</h3>
-                <p>Email: info@netralnews.id</p>
-                <p>Twitter: @NetralNews</p>
-                <p>Instagram: @netralnews</p>
+                <p>Email: -</p>
+                <p>Twitter: -</p>
+                <p>Instagram: -</p>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2024 Netral News. All rights reserved. | Dibuat dengan ❤️ di Indonesia</p>
+            <p>&copy; 2026 Netral News. All rights reserved. | Dibuat dengan ❤️ di Indonesia</p>
         </div>
     </footer>
 
@@ -563,7 +563,7 @@
         // Cache untuk terjemahan
         const translationCache = new Map();
         
-        // Sumber berita RSS dengan CORS proxy
+        // Sumber berita RSS dengan CORS proxy - URL yang sudah diperbaiki
         const newsSources = [
             {
                 name: 'BBC Indonesia',
@@ -582,28 +582,28 @@
             {
                 name: 'The Jakarta Post',
                 id: 'jakarta-post',
-                url: 'https://www.thejakartapost.com/rss',
+                url: 'https://www.thejakartapost.com/news/business?service=rss',
                 proxy: 'https://api.allorigins.win/get?url=',
                 language: 'en'
             },
             {
                 name: 'Manchester Evening News',
                 id: 'manchester',
-                url: 'https://www.manchestereveningnews.co.uk/?service=rss',
+                url: 'https://www.manchestereveningnews.co.uk/news/?service=rss',
                 proxy: 'https://api.allorigins.win/get?url=',
                 language: 'en'
             },
             {
-                name: 'ESPN Sports',
+                name: 'ESPN Bola',
                 id: 'espn',
-                url: 'https://www.espn.com/espn/rss/news',
+                url: 'https://www.espn.com/espn/rss/soccer',
                 proxy: 'https://api.allorigins.win/get?url=',
                 language: 'en'
             },
             {
                 name: 'National Geographic',
                 id: 'natgeo',
-                url: 'https://www.nationalgeographic.com/rss/science.rss',
+                url: 'https://www.nationalgeographic.com/science/rss',
                 proxy: 'https://api.allorigins.win/get?url=',
                 language: 'en'
             },
@@ -617,7 +617,7 @@
             {
                 name: 'Kompas',
                 id: 'kompas',
-                url: 'https://www.kompas.com/rss',
+                url: 'https://rss.kompas.com/api/feed/social?apikey=bc58c81819dff4b8d5c53540a2fc7ffd83e6314a',
                 proxy: 'https://api.allorigins.win/get?url=',
                 language: 'id'
             }
@@ -626,67 +626,110 @@
         let currentFilter = 'all';
         let allNews = [];
 
-        // Fungsi untuk parsing RSS
+        // Fungsi untuk parsing RSS yang lebih robust
         function parseRSS(xmlText, source) {
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-            const items = xmlDoc.querySelectorAll('item');
-            const news = [];
-
-            items.forEach((item, index) => {
-                if (index >= 8) return; // Ambil 8 berita per sumber
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
                 
-                const title = item.querySelector('title')?.textContent || '';
-                const description = item.querySelector('description')?.textContent || '';
-                const link = item.querySelector('link')?.textContent || '';
-                const pubDate = item.querySelector('pubDate')?.textContent || '';
-                
-                // Extract image from content:encoded or media:content
-                let image = '';
-                const content = item.querySelector('content\\:encoded, encoded')?.textContent || '';
-                const mediaContent = item.querySelector('media\\:content, content');
-                const enclosure = item.querySelector('enclosure');
-                
-                if (mediaContent) {
-                    image = mediaContent.getAttribute('url');
-                } else if (enclosure) {
-                    image = enclosure.getAttribute('url');
-                } else {
-                    const imgMatch = content.match(/<img[^>]+src="([^">]+)"/);
-                    if (imgMatch) image = imgMatch[1];
+                // Cek parsing error
+                if (xmlDoc.querySelector('parsererror')) {
+                    console.error(`Parser error for ${source.name}`);
+                    return [];
                 }
 
-                // Default image if none found
-                if (!image) {
-                    const defaultImages = {
-                        'bbc-indonesia': 'https://via.placeholder.com/400x220/bb1919/ffffff?text=BBC+Indonesia',
-                        'bbc-world': 'https://via.placeholder.com/400x220/bb1919/ffffff?text=BBC+World',
-                        'jakarta-post': 'https://via.placeholder.com/400x220/0056b3/ffffff?text=Jakarta+Post',
-                        'manchester': 'https://via.placeholder.com/400x220/7c2d12/ffffff?text=Manchester+News',
-                        'espn': 'https://via.placeholder.com/400x220/b91c1c/ffffff?text=ESPN+Sports',
-                        'natgeo': 'https://via.placeholder.com/400x220/fcd34d/92400e?text=National+Geographic',
-                        'cnn': 'https://via.placeholder.com/400x220/cc0000/ffffff?text=CNN+Indonesia',
-                        'kompas': 'https://via.placeholder.com/400x220/00599c/ffffff?text=Kompas'
-                    };
-                    image = defaultImages[source.id] || 'https://via.placeholder.com/400x220/666/fff?text=News';
-                }
+                const items = xmlDoc.querySelectorAll('item');
+                const news = [];
 
-                news.push({
-                    title,
-                    description,
-                    link,
-                    pubDate: new Date(pubDate),
-                    image,
-                    source: source.name,
-                    sourceId: source.id,
-                    language: source.language
+                items.forEach((item, index) => {
+                    if (index >= 8) return; // Ambil 8 berita per sumber
+                    
+                    const title = item.querySelector('title')?.textContent?.trim() || '';
+                    let description = item.querySelector('description')?.textContent?.trim() || '';
+                    const link = item.querySelector('link')?.textContent?.trim() || '';
+                    let pubDate = item.querySelector('pubDate')?.textContent?.trim() || '';
+                    
+                    // Bersihkan HTML tags dari description
+                    description = description.replace(/<[^>]*>/g, '').substring(0, 200) + '...';
+                    
+                    // Extract image dari berbagai kemungkinan
+                    let image = '';
+                    
+                    // 1. Coba media:content
+                    const mediaContent = item.querySelector('media\\:content, content');
+                    if (mediaContent && mediaContent.getAttribute('url')) {
+                        image = mediaContent.getAttribute('url');
+                    }
+                    
+                    // 2. Coba enclosure
+                    if (!image) {
+                        const enclosure = item.querySelector('enclosure');
+                        if (enclosure && enclosure.getAttribute('url')) {
+                            image = enclosure.getAttribute('url');
+                        }
+                    }
+                    
+                    // 3. Coba content:encoded untuk img tag
+                    if (!image) {
+                        const content = item.querySelector('content\\:encoded, encoded')?.textContent || '';
+                        const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["']/i);
+                        if (imgMatch) image = imgMatch[1];
+                    }
+                    
+                    // 4. Coba image di dalam description
+                    if (!image) {
+                        const descImgMatch = description.match(/<img[^>]+src=["']([^"']+)["']/i);
+                        if (descImgMatch) image = descImgMatch[1];
+                    }
+
+                    // Default image berdasarkan sumber
+                    if (!image || image === '') {
+                        const defaultImages = {
+                            'bbc-indonesia': 'https://via.placeholder.com/400x220/bb1919/ffffff?text=BBC+Indonesia',
+                            'bbc-world': 'https://via.placeholder.com/400x220/bb1919/ffffff?text=BBC+World',
+                            'jakarta-post': 'https://via.placeholder.com/400x220/0056b3/ffffff?text=Jakarta+Post',
+                            'manchester': 'https://via.placeholder.com/400x220/7c2d12/ffffff?text=Manchester+News',
+                            'espn': 'https://via.placeholder.com/400x220/b91c1c/ffffff?text=ESPN+Bola',
+                            'natgeo': 'https://via.placeholder.com/400x220/fcd34d/92400e?text=National+Geographic',
+                            'cnn': 'https://via.placeholder.com/400x220/cc0000/ffffff?text=CNN+Indonesia',
+                            'kompas': 'https://via.placeholder.com/400x220/00599c/ffffff?text=Kompas'
+                        };
+                        image = defaultImages[source.id] || 'https://via.placeholder.com/400x220/666/fff?text=News';
+                    }
+
+                    // Parse tanggal dengan fallback
+                    let parsedDate;
+                    try {
+                        parsedDate = new Date(pubDate);
+                        if (isNaN(parsedDate.getTime())) {
+                            parsedDate = new Date(); // Fallback ke sekarang jika invalid
+                        }
+                    } catch (e) {
+                        parsedDate = new Date();
+                    }
+
+                    if (title && link) { // Hanya tambahkan jika ada title dan link
+                        news.push({
+                            title,
+                            description: description || 'Tidak ada deskripsi tersedia.',
+                            link,
+                            pubDate: parsedDate,
+                            image,
+                            source: source.name,
+                            sourceId: source.id,
+                            language: source.language
+                        });
+                    }
                 });
-            });
 
-            return news;
+                return news;
+            } catch (error) {
+                console.error(`Error parsing RSS for ${source.name}:`, error);
+                return [];
+            }
         }
 
-        // Fungsi untuk menerjemahkan teks menggunakan MyMemory API (gratis)
+        // Fungsi untuk menerjemahkan teks menggunakan MyMemory API
         async function translateText(text, fromLang = 'en') {
             if (!text || fromLang === 'id') return text;
             
@@ -696,7 +739,7 @@
             }
 
             try {
-                // Batasi panjang teks untuk API gratis
+                // Batasi panjang teks
                 const truncatedText = text.substring(0, 400);
                 const encodedText = encodeURIComponent(truncatedText);
                 const url = `https://api.mymemory.translated.net/get?q=${encodedText}&langpair=${fromLang}|id`;
@@ -704,7 +747,7 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 
-                if (data.responseStatus === 200) {
+                if (data.responseStatus === 200 && data.responseData && data.responseData.translatedText) {
                     const translated = data.responseData.translatedText;
                     translationCache.set(cacheKey, translated);
                     return translated;
@@ -716,33 +759,53 @@
             }
         }
 
-        // Fungsi untuk memuat berita dari satu sumber
-        async function loadSource(source) {
-            try {
-                const response = await fetch(source.proxy + encodeURIComponent(source.url));
-                const data = await response.json();
-                
-                if (data.contents) {
-                    const news = parseRSS(data.contents, source);
-                    
-                    // Terjemahkan berita bahasa Inggris
-                    if (source.language === 'en') {
-                        for (let item of news) {
-                            item.originalTitle = item.title;
-                            item.originalDescription = item.description;
-                            item.title = await translateText(item.title, 'en');
-                            item.description = await translateText(item.description, 'en');
-                            item.isTranslated = true;
+        // Fungsi untuk memuat berita dari satu sumber dengan retry
+        async function loadSource(source, retries = 2) {
+            for (let i = 0; i <= retries; i++) {
+                try {
+                    const proxyUrl = source.proxy + encodeURIComponent(source.url);
+                    const response = await fetch(proxyUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
                         }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
                     }
                     
-                    return news;
+                    const data = await response.json();
+                    
+                    if (data.contents && data.status && data.status.http_code === 200) {
+                        const news = parseRSS(data.contents, source);
+                        
+                        // Terjemahkan berita bahasa Inggris
+                        if (source.language === 'en' && news.length > 0) {
+                            for (let item of news) {
+                                item.originalTitle = item.title;
+                                item.originalDescription = item.description;
+                                item.title = await translateText(item.title, 'en');
+                                item.description = await translateText(item.description, 'en');
+                                item.isTranslated = true;
+                            }
+                        }
+                        
+                        return news;
+                    } else {
+                        throw new Error('Invalid response structure');
+                    }
+                } catch (error) {
+                    console.warn(`Attempt ${i + 1} failed for ${source.name}:`, error);
+                    if (i === retries) {
+                        console.error(`Failed to load ${source.name} after ${retries + 1} attempts`);
+                        return [];
+                    }
+                    // Tunggu sebelum retry
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
                 }
-                return [];
-            } catch (error) {
-                console.error(`Error loading ${source.name}:`, error);
-                return [];
             }
+            return [];
         }
 
         // Fungsi utama untuk memuat semua berita
@@ -759,17 +822,23 @@
             `;
 
             try {
-                // Load semua sumber secara paralel dengan delay untuk menghindari rate limit
-                const newsArrays = [];
+                // Load semua sumber secara sequential untuk menghindari rate limit
+                allNews = [];
                 for (const source of newsSources) {
                     const news = await loadSource(source);
-                    newsArrays.push(news);
-                    // Delay 500ms antara request untuk menghindari rate limit API
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    if (news && news.length > 0) {
+                        allNews = allNews.concat(news);
+                    }
+                    // Delay antara sumber
+                    await new Promise(resolve => setTimeout(resolve, 300));
                 }
                 
-                // Gabungkan dan urutkan berita
-                allNews = newsArrays.flat().sort((a, b) => b.pubDate - a.pubDate);
+                // Urutkan berita berdasarkan tanggal
+                allNews.sort((a, b) => b.pubDate - a.pubDate);
+                
+                if (allNews.length === 0) {
+                    throw new Error('Tidak ada berita yang berhasil dimuat');
+                }
                 
                 displayNews();
             } catch (error) {
@@ -777,7 +846,8 @@
                 container.innerHTML = `
                     <div class="error-message">
                         <h3>⚠️ Gagal Memuat Berita</h3>
-                        <p>Silakan coba lagi nanti atau periksa koneksi internet Anda.</p>
+                        <p>${error.message || 'Silakan coba lagi nanti atau periksa koneksi internet Anda.'}</p>
+                        <button onclick="loadNews()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: white; color: #ef4444; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Coba Lagi</button>
                     </div>
                 `;
             } finally {
@@ -825,14 +895,18 @@
 
         // Fungsi untuk memformat tanggal
         function formatDate(date) {
-            const options = { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            };
-            return date.toLocaleDateString('id-ID', options);
+            try {
+                const options = { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                };
+                return date.toLocaleDateString('id-ID', options);
+            } catch (e) {
+                return 'Tanggal tidak tersedia';
+            }
         }
 
         // Fungsi filter
